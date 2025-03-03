@@ -1,7 +1,7 @@
-const createResponse = (status, message, code, data = null, error = null) => {
+const createResponse = (status, message, code, data = [], error = null) => {
     return {
         code,
-        data: data !== null ? data : (Array.isArray(data) ? [] : {}),
+        data: Array.isArray(data) ? data : [data],
         status,
         message: message || "",
         error: error || ""
