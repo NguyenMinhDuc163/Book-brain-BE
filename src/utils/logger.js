@@ -1,11 +1,10 @@
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf, colorize } = format;
-const pool = require('../configs/db.config');
-const {body} = require("express-validator");
+const { ServerLog } = require('../models');
 
 // Hàm lọc ra những headers quan trọng
 const filterHeaders = (headers) => {
-    const allowedHeaders = ['authorization', 'content-type'];  // Chỉ giữ lại các header quan trọng
+    const allowedHeaders = ['authorization', 'content-type'];
     let filteredHeaders = {};
     allowedHeaders.forEach(header => {
         if (headers[header]) {
@@ -15,85 +14,76 @@ const filterHeaders = (headers) => {
     return filteredHeaders;
 };
 
-// Hàm định dạng JSON để hiển thị trên một dòng mà không có dấu gạch chéo
-const formatJsonInline = (obj) => {
-    return JSON.stringify(obj, null, 0);  // Định dạng JSON trên 1 dòng
+// Hàm lưu log vào database bằng Sequelize
+const saveLogToDB = async (level, message, req, res) => {
+    try {
+        await ServerLog.create({
+            level,
+            message,
+            status_code: res.statusCode,
+            method: req.method,
+            url: req.originalUrl,
+            headers: filterHeaders(req.headers),
+            request_body: req.body,
+            response_body: res.body ? JSON.parse(res.body) : null,
+            timestamp: new Date()
+        });
+    } catch (err) {
+        console.error('Lỗi khi lưu log vào database:', err);
+    }
 };
 
-// Định dạng log mới cho console
+// Định dạng log console
 const logFormat = printf(({ level, message, timestamp, meta }) => {
     return [
-        `\n${timestamp} [${level}]`,                             // Dòng chứa timestamp và level của log
-        `Method: ${meta?.request?.method || 'N/A'}`,             // Dòng chứa phương thức HTTP (GET, POST, etc.)
-        `URL: ${meta?.request?.url || 'N/A'}`,                   // Dòng chứa URL được gọi
-        `Headers: ${JSON.stringify(filterHeaders(meta?.request?.headers || {}))}`, // Dòng chứa các headers quan trọng
-        `Request Body: ${formatJsonInline(meta?.request?.body || {})}`, // Dòng chứa body của request trên 1 dòng
-        `Response Status: ${meta?.response?.statusCode || 'N/A'}`,    // Dòng chứa mã trạng thái của response
-        `Response Body: ${formatJsonInline(meta?.response?.body || {})}` // Dòng chứa body của response trên 1 dòng
-    ].join('\n');  // Ghép các dòng lại với nhau
+        `\n${timestamp} [${level}]`,
+        `Method: ${meta?.request?.method || 'N/A'}`,
+        `URL: ${meta?.request?.url || 'N/A'}`,
+        `Headers: ${JSON.stringify(filterHeaders(meta?.request?.headers || {}))}`,
+        `Request Body: ${JSON.stringify(meta?.request?.body || {})}`,
+        `Response Status: ${meta?.response?.statusCode || 'N/A'}`,
+        `Response Body: ${JSON.stringify(meta?.response?.body || {})}`
+    ].join('\n');
 });
 
 // Tạo logger
 const logger = createLogger({
     level: 'info',
     format: combine(
-        colorize(),  // Giúp hiển thị log đẹp hơn với màu sắc
+        colorize(),
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        logFormat  // Định dạng log đơn giản cho console
+        logFormat
     ),
     transports: [
-        new transports.Console(),  // Chỉ hiển thị log trên console
+        new transports.Console(),
     ],
 });
 
-// Hàm để lưu log vào database (chỉ lưu các headers quan trọng và xoá dấu gạch chéo trong JSON)
-const saveLogToDB = async (level, message, req, res) => {
-    const query = `
-    INSERT INTO server_log (level, message, status_code, method, url, headers, request_body, response_body, timestamp)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-  `;
-    const values = [
-        level,
-        message,
-        res.statusCode,                                  // Status code của response
-        req.method,                                      // Phương thức HTTP (GET, POST, etc.)
-        req.originalUrl,                                 // URL được gọi
-        JSON.stringify(filterHeaders(req.headers)),      // Chỉ lưu các headers quan trọng
-        JSON.stringify(req.body),                        // Body của request dưới dạng JSON
-        res.body ? JSON.stringify(res.body) : null       // Kiểm tra trước khi lưu body
-    ];
-    try {
-        await pool.query(query, values);
-    } catch (err) {
-        console.error('Lỗi khi lưu log vào database:', err);
-    }
-};
-
-// Middleware để ghi log (console sẽ đơn giản, database sẽ đầy đủ nhưng lọc thông tin)
+// Middleware để ghi log vào database
 const logMiddleware = (req, res, next) => {
     const oldSend = res.send;
 
     res.send = function (data) {
-        res.body = data;  // Gán body của response trước khi gửi
+        res.body = data;  // Gán response body
         return oldSend.apply(res, arguments);
     };
-    res.on('finish', () => {
+
+    res.on('finish', async () => {
         const message = `${req.method} ${req.originalUrl} ${res.statusCode}`;
         const meta = {
             request: {
                 method: req.method,
                 url: req.originalUrl,
-                headers: req.headers, // Headers đầy đủ, sẽ được lọc khi in ra console và database
+                headers: req.headers,
                 body: req.body,
             },
             response: {
                 statusCode: res.statusCode,
                 statusMessage: res.statusMessage,
-                body: null, // Mặc định là null nếu không có body
+                body: null
             },
         };
 
-        // Kiểm tra và parse body nếu là JSON hợp lệ
         try {
             if (res.body) {
                 meta.response.body = JSON.parse(res.body);
@@ -102,8 +92,8 @@ const logMiddleware = (req, res, next) => {
             console.warn('Không thể parse response body:', err.message);
         }
 
-        logger.info(message, { meta }); // Log đơn giản ra console
-        saveLogToDB('info', message, req, res); // Lưu đầy đủ thông tin đã lọc vào database
+        logger.info(message, { meta }); // Log ra console
+        await saveLogToDB('info', message, req, res); // Lưu vào database
     });
 
     next();

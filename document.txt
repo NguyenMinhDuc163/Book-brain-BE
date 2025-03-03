@@ -1,0 +1,18 @@
+// tạo bảng
+npx sequelize-cli migration:generate --name modify_serverlog
+
+// tạo bảng mới
+npx sequelize-cli db:migrate
+
+//chạy lại, dùng:
+npx sequelize-cli db:migrate:undo
+npx sequelize-cli db:migrate
+
+//Tạo model mới
+npx sequelize-cli model:generate --name NewTable --attributes name:string,description:text
+
+// Thêm dữ liệu vào Seeder
+npx sequelize-cli seed:generate --name newtable-seeder
+
+// chay để thêm db fake
+npx sequelize-cli db:seed:all
