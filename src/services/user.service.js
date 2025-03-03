@@ -1,170 +1,72 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const UserModel = require('../models/user.model');
-const { validateRegisterData, validateLoginData } = require('../utils/validation');
-const { sendResetEmail } = require('../services/email.service');
-
+const { User } = require('../models');
+const { createResponse } = require('../utils/responseHelper');
 class UserService {
+
     // Đăng ký người dùng
     static async registerUser(data) {
-        const { error } = validateRegisterData(data);
-        if (error) {
-            throw new Error(error.details[0].message);
+        try {
+            data.password = await bcrypt.hash(data.password, 10);
+            const user = await User.create(data);
+
+            return createResponse(201, "Đăng ký thành công.", "success", user);
+        } catch (error) {
+            console.error("Lỗi khi đăng ký:", error.message);
+            return createResponse(500, "Lỗi server khi đăng ký.", "fail", [], error.message);
         }
-
-        const existingUser = await UserModel.findByEmail(data.email);
-        if (existingUser) {
-            throw new Error('Email đã được sử dụng.');
-        }
-
-        const hashedPassword = await bcrypt.hash(data.password, 10);
-        const newUser = await UserModel.register({ ...data, password: hashedPassword });
-
-        return {
-            status: 201,
-            statusText: 'success',
-            message: 'Người dùng đã được đăng ký thành công.',
-            data: newUser
-        };
     }
+
+
+    // Cập nhật thông tin người dùng
+    static async updateUserInfo(userId, data) {
+        try {
+            // Kiểm tra ID hợp lệ
+            userId = parseInt(userId, 10);
+            if (isNaN(userId) || userId <= 0) {
+                return createResponse(400, "ID người dùng không hợp lệ.", "fail", []);
+            }
+
+            // Kiểm tra người dùng có tồn tại không
+            const user = await User.findByPk(userId);
+            if (!user) {
+                return createResponse(404, "Người dùng không tồn tại.", "fail", []);
+            }
+
+            // Cập nhật thông tin người dùng
+            await user.update(data);
+            return createResponse(200, "Cập nhật thông tin thành công.", "success", user);
+        } catch (error) {
+            console.error("Lỗi khi cập nhật thông tin người dùng:", error.message);
+            return createResponse(500, "Lỗi server khi cập nhật thông tin.", "fail", [], error.message);
+        }
+    }
+
 
     // Đăng nhập người dùng
     static async loginUser(data) {
-        const { error } = validateLoginData(data);
-        if (error) {
-            throw new Error(error.details[0].message);
+        try {
+            const user = await User.findOne({ where: { email: data.email } });
+
+            if (!user) {
+                return createResponse(401, "Người dùng không tồn tại.", "fail", []);
+            }
+
+            const isPasswordValid = await bcrypt.compare(data.password, user.password);
+            if (!isPasswordValid) {
+                return createResponse(401, "Mật khẩu không chính xác.", "fail", []);
+            }
+
+            // Tạo JWT Token
+            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+            return createResponse(200, "Đăng nhập thành công.", "success", { token, user });
+        } catch (error) {
+            console.error("Lỗi khi đăng nhập:", error.message);
+            return createResponse(500, "Lỗi server khi đăng nhập.", "fail", [], error.message);
         }
-
-        const user = await UserModel.findByEmail(data.email);
-        if (!user) {
-            throw new Error('Người dùng không tồn tại.');
-        }
-
-        const isPasswordValid = await bcrypt.compare(data.password, user.password);
-        if (!isPasswordValid) {
-            throw new Error('Mật khẩu không chính xác.');
-        }
-
-        const token = jwt.sign(
-            { userId: user.id },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        return {
-            status: 200,
-            statusText: 'success',
-            message: 'Đăng nhập thành công.',
-            data: [
-                { key: 'token', value: token },
-                { key: 'user', value: { id: user.id, username: user.username, email: user.email } }
-            ]
-        };
     }
 
-    // Cập nhật thông tin người dùng
-    static async updateUserInfo(data) {
-        const { id, email, phone_number, click_send_name, click_send_key } = data;
-
-        if (!id) {
-            throw new Error('ID người dùng là bắt buộc.');
-        }
-
-        const existingUser = await UserModel.findById(id);
-        if (!existingUser) {
-            throw new Error('Người dùng không tồn tại.');
-        }
-
-        const updatedUser = await UserModel.updateUser(id, {
-            email,
-            phone_number,
-            click_send_name,
-            click_send_key
-        });
-
-        return {
-            status: 200,
-            statusText: 'success',
-            message: 'Thông tin người dùng đã được cập nhật thành công.',
-            data: [updatedUser]
-        };
-    }
-
-    // Đổi mật khẩu người dùng
-    static async changePassword(data) {
-        const { id, oldPassword, newPassword } = data;
-
-        if (!id || !oldPassword || !newPassword) {
-            throw new Error('Thiếu thông tin cần thiết.');
-        }
-
-        const user = await UserModel.findById(id);
-        if (!user) {
-            throw new Error('Người dùng không tồn tại.');
-        }
-
-        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
-        if (!isPasswordValid) {
-            throw new Error('Mật khẩu cũ không chính xác.');
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await UserModel.updatePassword(id, hashedPassword);
-
-        return {
-            status: 200,
-            statusText: 'success',
-            message: 'Đổi mật khẩu thành công.',
-            data: []
-        };
-    }
-
-    // Yêu cầu quên mật khẩu
-    static async requestForgotPassword(data) {
-        const { email } = data;
-
-        const user = await UserModel.findByEmail(email);
-        if (!user) {
-            throw new Error('Email không tồn tại.');
-        }
-
-        const resetToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-        const resetLink = `${process.env.FRONTEND_URL}?token=${resetToken}`;
-        await sendResetEmail(email, resetLink);
-
-        return {
-            status: 200,
-            statusText: 'success',
-            message: 'Email reset mật khẩu đã được gửi.',
-            data: []
-        };
-    }
-
-    // Đặt lại mật khẩu
-    static async resetPassword(data, authHeader) {
-        const token = authHeader && authHeader.split(' ')[1];
-        const { newPassword } = data;
-
-        if (!token || !newPassword) {
-            throw new Error('Thiếu thông tin cần thiết.');
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await UserModel.findById(decoded.userId);
-        if (!user) {
-            throw new Error('Người dùng không tồn tại.');
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await UserModel.updatePassword(user.id, hashedPassword);
-
-        return {
-            status: 200,
-            statusText: 'success',
-            message: 'Mật khẩu đã được cập nhật thành công.',
-            data: []
-        };
-    }
 }
 
 module.exports = UserService;
