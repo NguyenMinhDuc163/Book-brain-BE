@@ -14,6 +14,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=NguyenDuc@163
       - DB_NAME=book_brain_db
+      - DB_DIALECT=postgres
       - NODE_ENV=production
     depends_on:
       - database # Đảm bảo database khởi động trước ứng dụng
