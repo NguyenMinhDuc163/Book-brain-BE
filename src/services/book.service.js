@@ -187,6 +187,80 @@ const increaseBookViews = async (bookId) => {
     const result = await pool.query(query, values);
     return result.rows[0];
 };
+
+const getBookDetail = async (bookId, chapterOrder = null) => {
+    // Lấy thông tin cơ bản về sách
+    const bookQuery = `
+        SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
+               a.author_id, a.name as author_name, a.biography as author_biography,
+               c.category_id, c.name as category_name,
+               b.created_at, b.updated_at
+        FROM books b
+                 LEFT JOIN authors a ON b.author_id = a.author_id
+                 LEFT JOIN categories c ON b.category_id = c.category_id
+        WHERE b.book_id = $1
+    `;
+    const bookResult = await pool.query(bookQuery, [bookId]);
+    const book = bookResult.rows[0];
+
+    if (!book) return null;
+
+    // Truy vấn tổng số chương
+    const totalChaptersQuery = `
+        SELECT COUNT(*) as total_chapters
+        FROM chapters
+        WHERE book_id = $1
+    `;
+    const totalResult = await pool.query(totalChaptersQuery, [bookId]);
+    const totalChapters = parseInt(totalResult.rows[0].total_chapters) || 0;
+
+    // Lấy danh sách tất cả các chương (không bao gồm nội dung)
+    const chaptersListQuery = `
+        SELECT chapter_id, title, url, chapter_order
+        FROM chapters
+        WHERE book_id = $1
+        ORDER BY chapter_order ASC
+    `;
+    const chaptersListResult = await pool.query(chaptersListQuery, [bookId]);
+    const chaptersList = chaptersListResult.rows;
+
+    let chapterContent = null;
+
+    // Nếu có chỉ định số chương, lấy nội dung của chương đó
+    if (chapterOrder !== null) {
+        const chapterQuery = `
+            SELECT chapter_id, title, url, content, chapter_order, next_chapter_url, prev_chapter_url
+            FROM chapters
+            WHERE book_id = $1 AND chapter_order = $2
+        `;
+        const chapterResult = await pool.query(chapterQuery, [bookId, chapterOrder]);
+
+        if (chapterResult.rows.length > 0) {
+            chapterContent = {
+                chapter_id: chapterResult.rows[0].chapter_id,
+                title: chapterResult.rows[0].title,
+                chapter_order: chapterResult.rows[0].chapter_order,
+                next_chapter_url: chapterResult.rows[0].next_chapter_url,
+                prev_chapter_url: chapterResult.rows[0].prev_chapter_url,
+                content: chapterResult.rows[0].content
+            };
+        }
+    }
+
+    // Trả về thông tin sách kết hợp với danh sách chương và nội dung chương được chỉ định
+    return {
+        ...book,
+        total_chapters: totalChapters,
+        chapters: chaptersList,
+        current_chapter: chapterContent
+    };
+};
+
+// Thêm hàm mới vào module.exports
+module.exports = {
+    // Các hàm hiện có...
+    getBookDetail
+};
 module.exports = {
     getBooks,
     searchBooks,
@@ -194,5 +268,6 @@ module.exports = {
     getBookById,
     getChaptersByBookId,
     getChapterById,
-    increaseBookViews
+    increaseBookViews,
+    getBookDetail
 };

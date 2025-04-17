@@ -1,5 +1,6 @@
 const { createResponse } = require('../utils/responseHelper');
 const { logger } = require('../utils/logger');
+
 const {
     getBooks,
     searchBooks,
@@ -7,7 +8,8 @@ const {
     getBookById,
     getChaptersByBookId,
     getChapterById,
-    increaseBookViews
+    increaseBookViews,
+    getBookDetail
 } = require('../services/book.service');
 exports.getBooks = async (req, res) => {
     try {
@@ -171,5 +173,42 @@ exports.increaseBookViews = async (req, res) => {
     } catch (err) {
         logger.error(`Lỗi khi tăng lượt xem sách: ${err.message}`, { meta: { bookId, error: err } });
         res.status(200).json(createResponse('fail', 'Lỗi khi tăng lượt xem sách.', 500, [], err.message));
+    }
+};
+exports.getBookDetail = async (req, res) => {
+    const bookId = req.query.id;
+    const chapterOrder = req.query.chapter ? parseInt(req.query.chapter) : null;
+
+    if (!bookId) {
+        logger.warn('Thiếu ID sách.');
+        return res.status(200).json(createResponse('fail', 'Vui lòng cung cấp ID sách.', 400, []));
+    }
+
+    try {
+        const book = await getBookDetail(bookId, chapterOrder);
+
+        if (book) {
+            if (chapterOrder) {
+                if (book.current_chapter) {
+                    logger.info(`Đã lấy thông tin sách và nội dung chương ${chapterOrder}, ID sách: ${bookId}`);
+                    // Bọc book trong một mảng để trả về dạng list
+                    res.status(200).json(createResponse('success', `Thông tin sách và nội dung chương ${chapterOrder} đã được truy xuất thành công.`, 200, [book]));
+                } else {
+                    logger.warn(`Không tìm thấy chương ${chapterOrder} cho sách ID: ${bookId}`);
+                    // Bọc book trong một mảng ngay cả khi không tìm thấy chương
+                    res.status(200).json(createResponse('fail', `Không tìm thấy chương ${chapterOrder} cho sách này.`, 404, [book]));
+                }
+            } else {
+                logger.info(`Đã lấy thông tin sách, ID: ${bookId}`);
+                // Bọc book trong một mảng
+                res.status(200).json(createResponse('success', 'Thông tin sách đã được truy xuất thành công.', 200, [book]));
+            }
+        } else {
+            logger.warn(`Không tìm thấy sách với ID: ${bookId}`);
+            res.status(200).json(createResponse('fail', 'Không tìm thấy sách.', 404, []));
+        }
+    } catch (err) {
+        logger.error(`Lỗi khi lấy thông tin sách và nội dung: ${err.message}`, { meta: { bookId, chapterOrder, error: err } });
+        res.status(200).json(createResponse('fail', 'Lỗi khi lấy thông tin sách và nội dung.', 500, [], err.message));
     }
 };
