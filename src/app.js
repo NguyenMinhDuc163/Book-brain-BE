@@ -4,9 +4,10 @@ require('dotenv').config();
 const app = express();
 const cors = require('cors');
 const authRouter = require('./routes/auth.router'); // Route công khai
-
+const categoryRouter = require('./routes/category.router');
 const { logMiddleware } = require('./utils/logger');
 const { authenticateJWT } = require('./middleware/authMiddleware'); // Middleware xác thực JWT
+const bookRouter = require('./routes/book.router');
 
 // Middleware để parse JSON và ghi log
 app.use(express.json());
@@ -42,8 +43,8 @@ app.use((req, res, next) => {
 app.use(authRouter);
 
 // Các route yêu cầu xác thực JWT
-
-
+app.use(categoryRouter);
+app.use(bookRouter);
 
 app.use((req, res, next) => {
     res.status(404).json({
