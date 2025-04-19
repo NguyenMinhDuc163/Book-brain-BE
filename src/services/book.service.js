@@ -211,8 +211,22 @@ const getBookDetail = async (bookId, chapterOrder = null) => {
         FROM chapters
         WHERE book_id = $1
     `;
-    const totalResult = await pool.query(totalChaptersQuery, [bookId]);
-    const totalChapters = parseInt(totalResult.rows[0].total_chapters) || 0;
+
+    // Truy vấn tổng số đánh giá
+    const totalReviewsQuery = `
+        SELECT COUNT(*) as total_reviews
+        FROM book_reviews
+        WHERE book_id = $1
+    `;
+
+    // Thực hiện cả hai truy vấn đồng thời
+    const [totalChaptersResult, totalReviewsResult] = await Promise.all([
+        pool.query(totalChaptersQuery, [bookId]),
+        pool.query(totalReviewsQuery, [bookId])
+    ]);
+
+    const totalChapters = parseInt(totalChaptersResult.rows[0].total_chapters) || 0;
+    const totalReviews = parseInt(totalReviewsResult.rows[0].total_reviews) || 0;
 
     // Lấy danh sách tất cả các chương (không bao gồm nội dung)
     const chaptersListQuery = `
@@ -251,12 +265,11 @@ const getBookDetail = async (bookId, chapterOrder = null) => {
     return {
         ...book,
         total_chapters: totalChapters,
+        total_reviews: totalReviews,
         chapters: chaptersList,
         current_chapter: chapterContent
     };
 };
-
-
 module.exports = {
     getBooks,
     searchBooks,

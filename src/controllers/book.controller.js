@@ -105,7 +105,7 @@ exports.getBookById = async (req, res) => {
 };
 
 exports.getChaptersByBookId = async (req, res) => {
-    const { bookId } = req.params;
+    const bookId = req.query.bookId;
 
     if (!bookId) {
         logger.warn('Thiếu ID sách.');
@@ -127,7 +127,6 @@ exports.getChaptersByBookId = async (req, res) => {
         res.status(200).json(createResponse('fail', 'Lỗi khi lấy danh sách chương.', 500, [], err.message));
     }
 };
-
 exports.getChapterById = async (req, res) => {
     const { chapterId } = req.params;
 
