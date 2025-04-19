@@ -256,11 +256,7 @@ const getBookDetail = async (bookId, chapterOrder = null) => {
     };
 };
 
-// Thêm hàm mới vào module.exports
-module.exports = {
-    // Các hàm hiện có...
-    getBookDetail
-};
+
 module.exports = {
     getBooks,
     searchBooks,
