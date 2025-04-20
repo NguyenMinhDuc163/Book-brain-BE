@@ -9,6 +9,10 @@ const { logMiddleware } = require('./utils/logger');
 const { authenticateJWT } = require('./middleware/authMiddleware'); // Middleware xác thực JWT
 const bookRouter = require('./routes/book.router');
 const reviewRouter = require('./routes/review.router');
+const favoriteRouter = require('./routes/favorite.router');
+const subscriptionRouter = require('./routes/subscription.router');
+const notificationRouter = require('./routes/notification.router');
+
 
 // Middleware để parse JSON và ghi log
 app.use(express.json());
@@ -47,6 +51,9 @@ app.use(authRouter);
 app.use(categoryRouter);
 app.use(bookRouter);
 app.use(reviewRouter);
+app.use(favoriteRouter);
+app.use(subscriptionRouter);
+app.use(notificationRouter);
 
 
 app.use((req, res, next) => {

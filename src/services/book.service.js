@@ -188,8 +188,8 @@ const increaseBookViews = async (bookId) => {
     return result.rows[0];
 };
 
-const getBookDetail = async (bookId, chapterOrder = null) => {
-    // Lấy thông tin cơ bản về sách
+const getBookDetail = async (bookId, chapterOrder = null, userId) => {
+    // Phần code lấy thông tin sách vẫn giữ nguyên
     const bookQuery = `
         SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
                a.author_id, a.name as author_name, a.biography as author_biography,
@@ -205,30 +205,16 @@ const getBookDetail = async (bookId, chapterOrder = null) => {
 
     if (!book) return null;
 
-    // Truy vấn tổng số chương
-    const totalChaptersQuery = `
-        SELECT COUNT(*) as total_chapters
-        FROM chapters
-        WHERE book_id = $1
-    `;
-
-    // Truy vấn tổng số đánh giá
-    const totalReviewsQuery = `
-        SELECT COUNT(*) as total_reviews
-        FROM book_reviews
-        WHERE book_id = $1
-    `;
-
-    // Thực hiện cả hai truy vấn đồng thời
+    // Truy vấn tổng số chương và đánh giá
     const [totalChaptersResult, totalReviewsResult] = await Promise.all([
-        pool.query(totalChaptersQuery, [bookId]),
-        pool.query(totalReviewsQuery, [bookId])
+        pool.query(`SELECT COUNT(*) as total_chapters FROM chapters WHERE book_id = $1`, [bookId]),
+        pool.query(`SELECT COUNT(*) as total_reviews FROM book_reviews WHERE book_id = $1`, [bookId])
     ]);
 
     const totalChapters = parseInt(totalChaptersResult.rows[0].total_chapters) || 0;
     const totalReviews = parseInt(totalReviewsResult.rows[0].total_reviews) || 0;
 
-    // Lấy danh sách tất cả các chương (không bao gồm nội dung)
+    // Lấy danh sách các chương
     const chaptersListQuery = `
         SELECT chapter_id, title, url, chapter_order
         FROM chapters
@@ -261,13 +247,32 @@ const getBookDetail = async (bookId, chapterOrder = null) => {
         }
     }
 
+    // Kiểm tra trạng thái yêu thích và theo dõi
+    // Kiểm tra sách có được theo dõi không
+    const subscriptionQuery = `
+        SELECT is_active FROM book_subscriptions 
+        WHERE user_id = $1 AND book_id = $2
+    `;
+    const subscriptionResult = await pool.query(subscriptionQuery, [userId, bookId]);
+    const isSubscribed = subscriptionResult.rows.length > 0 && subscriptionResult.rows[0].is_active;
+
+    // Kiểm tra sách có trong danh sách yêu thích không
+    const favoriteQuery = `
+        SELECT 1 FROM user_favorites 
+        WHERE id = $1 AND book_id = $2
+    `;
+    const favoriteResult = await pool.query(favoriteQuery, [userId, bookId]);
+    const isFavorited = favoriteResult.rows.length > 0;
+
     // Trả về thông tin sách kết hợp với danh sách chương và nội dung chương được chỉ định
     return {
         ...book,
         total_chapters: totalChapters,
         total_reviews: totalReviews,
         chapters: chaptersList,
-        current_chapter: chapterContent
+        current_chapter: chapterContent,
+        is_subscribed: isSubscribed,
+        is_favorited: isFavorited
     };
 };
 module.exports = {

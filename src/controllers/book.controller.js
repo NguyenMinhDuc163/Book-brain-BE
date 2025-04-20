@@ -177,6 +177,7 @@ exports.increaseBookViews = async (req, res) => {
 exports.getBookDetail = async (req, res) => {
     const bookId = req.query.id;
     const chapterOrder = req.query.chapter ? parseInt(req.query.chapter) : null;
+    const userId = req.user.userId; // Lấy userId từ token JWT
 
     if (!bookId) {
         logger.warn('Thiếu ID sách.');
@@ -184,22 +185,19 @@ exports.getBookDetail = async (req, res) => {
     }
 
     try {
-        const book = await getBookDetail(bookId, chapterOrder);
+        const book = await getBookDetail(bookId, chapterOrder, userId);
 
         if (book) {
             if (chapterOrder) {
                 if (book.current_chapter) {
                     logger.info(`Đã lấy thông tin sách và nội dung chương ${chapterOrder}, ID sách: ${bookId}`);
-                    // Bọc book trong một mảng để trả về dạng list
                     res.status(200).json(createResponse('success', `Thông tin sách và nội dung chương ${chapterOrder} đã được truy xuất thành công.`, 200, [book]));
                 } else {
                     logger.warn(`Không tìm thấy chương ${chapterOrder} cho sách ID: ${bookId}`);
-                    // Bọc book trong một mảng ngay cả khi không tìm thấy chương
                     res.status(200).json(createResponse('fail', `Không tìm thấy chương ${chapterOrder} cho sách này.`, 404, [book]));
                 }
             } else {
                 logger.info(`Đã lấy thông tin sách, ID: ${bookId}`);
-                // Bọc book trong một mảng
                 res.status(200).json(createResponse('success', 'Thông tin sách đã được truy xuất thành công.', 200, [book]));
             }
         } else {
