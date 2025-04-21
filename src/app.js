@@ -12,6 +12,8 @@ const reviewRouter = require('./routes/review.router');
 const favoriteRouter = require('./routes/favorite.router');
 const subscriptionRouter = require('./routes/subscription.router');
 const notificationRouter = require('./routes/notification.router');
+const readingHistoryRouter = require('./routes/reading-history.router');
+const rankingRouter = require('./routes/ranking.router');
 
 
 // Middleware để parse JSON và ghi log
@@ -54,6 +56,8 @@ app.use(reviewRouter);
 app.use(favoriteRouter);
 app.use(subscriptionRouter);
 app.use(notificationRouter);
+app.use(readingHistoryRouter);
+app.use(rankingRouter);
 
 
 app.use((req, res, next) => {
