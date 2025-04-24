@@ -6,41 +6,30 @@ const rankingService = require('../services/ranking.service');
 // Lấy bảng xếp hạng sách
 exports.getBookRankings = async (req, res) => {
     try {
-        const type = req.query.type || 'popular'; // Mặc định là xếp hạng phổ biến
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
 
-        const rankings = await rankingService.getBookRankings(type, limit);
+        const rankings = await rankingService.getBookRankings(limit);
 
-        if (rankings.length > 0) {
-            logger.info(`Đã lấy bảng xếp hạng ${type} với ${rankings.length} sách`);
-            res.status(200).json(createResponse('success', `Bảng xếp hạng ${type} đã được truy xuất thành công.`, 200, rankings));
-        } else {
-            logger.warn(`Không tìm thấy sách nào trong bảng xếp hạng ${type}`);
-            res.status(200).json(createResponse('fail', `Không tìm thấy sách nào trong bảng xếp hạng ${type}.`, 404, []));
-        }
+        logger.info(`Đã lấy bảng xếp hạng với ${rankings.length} sách`);
+        res.status(200).json(createResponse('success', 'Bảng xếp hạng sách đã được truy xuất thành công.', 200, rankings));
     } catch (err) {
         logger.error(`Lỗi khi lấy bảng xếp hạng sách: ${err.message}`, { meta: { request: req.query, error: err } });
         res.status(200).json(createResponse('fail', 'Lỗi khi lấy bảng xếp hạng sách.', 500, [], err.message));
     }
 };
 
-// Lấy danh sách tác giả được đề xuất
-exports.getAuthorRecommendations = async (req, res) => {
+// Lấy danh sách tác giả xếp hạng cao
+exports.getAuthorRankings = async (req, res) => {
     try {
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
 
-        const authors = await rankingService.getAuthorRecommendations(limit);
+        const authors = await rankingService.getAuthorRankings(limit);
 
-        if (authors.length > 0) {
-            logger.info(`Đã lấy ${authors.length} tác giả được đề xuất`);
-            res.status(200).json(createResponse('success', 'Danh sách tác giả được đề xuất đã được truy xuất thành công.', 200, authors));
-        } else {
-            logger.warn('Không tìm thấy tác giả nào được đề xuất');
-            res.status(200).json(createResponse('fail', 'Không tìm thấy tác giả nào được đề xuất.', 404, []));
-        }
+        logger.info(`Đã lấy ${authors.length} tác giả xếp hạng cao`);
+        res.status(200).json(createResponse('success', 'Danh sách tác giả xếp hạng cao đã được truy xuất thành công.', 200, authors));
     } catch (err) {
-        logger.error(`Lỗi khi lấy danh sách tác giả được đề xuất: ${err.message}`, { meta: { request: req.query, error: err } });
-        res.status(200).json(createResponse('fail', 'Lỗi khi lấy danh sách tác giả được đề xuất.', 500, [], err.message));
+        logger.error(`Lỗi khi lấy danh sách tác giả xếp hạng cao: ${err.message}`, { meta: { request: req.query, error: err } });
+        res.status(200).json(createResponse('fail', 'Lỗi khi lấy danh sách tác giả xếp hạng cao.', 500, [], err.message));
     }
 };
 

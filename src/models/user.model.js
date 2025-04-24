@@ -35,7 +35,7 @@ class UserModel {
         const query = `
         UPDATE users
         SET password = $1
-        WHERE user_id = $2`;
+        WHERE id = $2`;
         const values = [hashedPassword, userId];
         await pool.query(query, values);
     }
@@ -43,7 +43,7 @@ class UserModel {
 
     // Tìm người dùng theo id
     static async findById(id) {
-        const query = `SELECT * FROM users WHERE user_id = $1`;
+        const query = `SELECT * FROM users WHERE id = $1`;
         const result = await pool.query(query, [id]);
         return result.rows[0];
     }
@@ -57,8 +57,8 @@ class UserModel {
             click_send_name = COALESCE($3, click_send_name),
             click_send_key = COALESCE($4, click_send_key),
             updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $5
-        RETURNING user_id, username, email, phone_number, click_send_name, click_send_key, updated_at;
+        WHERE id = $5
+        RETURNING id, username, email, phone_number, click_send_name, click_send_key, updated_at;
     `;
         const values = [
             data.email || null,
