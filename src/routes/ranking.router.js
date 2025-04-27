@@ -7,9 +7,6 @@ const rankingController = require('../controllers/ranking.controller');
 router.get('/api/v1/rankings/books', rankingController.getBookRankings);
 
 // Lấy danh sách tác giả xếp hạng cao
-router.get('/api/v1/rankings/authors', rankingController.getAuthorRankings);
-
-// Cập nhật bảng xếp hạng (admin only)
-router.post('/api/v1/rankings/update', rankingController.updateRankings);
+router.get('/api/v1/rankings/authors', rankingController.getAuthorRankings)
 
 module.exports = router;

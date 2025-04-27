@@ -53,23 +53,35 @@ const searchBooks = async (keyword, limit = 10) => {
     const query = `
         SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
                a.author_id, a.name as author_name,
-               c.category_id, c.name as category_name
+               c.category_id, c.name as category_name,
+               GREATEST(
+                 similarity(b.title, $1),
+                 similarity(a.name, $1),
+                 similarity(c.name, $1),
+                 similarity(b.excerpt, $1)
+               ) as similarity_score
         FROM books b
         LEFT JOIN authors a ON b.author_id = a.author_id
         LEFT JOIN categories c ON b.category_id = c.category_id
         WHERE 
-            b.title ILIKE $1 OR 
-            b.excerpt ILIKE $1 OR 
-            a.name ILIKE $1
-        ORDER BY b.views DESC
-        LIMIT $2
+            b.title ILIKE $2 OR 
+            a.name ILIKE $2 OR
+            c.name ILIKE $2 OR
+            b.excerpt ILIKE $2 OR
+            similarity(b.title, $1) > 0.3 OR
+            similarity(a.name, $1) > 0.3 OR
+            similarity(c.name, $1) > 0.3
+        ORDER BY similarity_score DESC, b.views DESC
+        LIMIT $3
     `;
-    const values = [`%${keyword}%`, limit];
+    const values = [keyword, `%${keyword}%`, limit];
+
+    // Đảm bảo extension pg_trgm đã được cài đặt
+    // Cần chạy lệnh này trước: CREATE EXTENSION pg_trgm;
 
     const result = await pool.query(query, values);
     return result.rows;
 };
-
 const getTrendingBooks = async (limit = 10) => {
     const query = `
         SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
@@ -86,66 +98,6 @@ const getTrendingBooks = async (limit = 10) => {
     const result = await pool.query(query, values);
     return result.rows;
 };
-const getBookById = async (bookId) => {
-    // Truy vấn thông tin cơ bản về sách
-    const bookQuery = `
-        SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
-               a.author_id, a.name as author_name, a.biography as author_biography,
-               c.category_id, c.name as category_name, 
-               b.created_at, b.updated_at
-        FROM books b
-        LEFT JOIN authors a ON b.author_id = a.author_id
-        LEFT JOIN categories c ON b.category_id = c.category_id
-        WHERE b.book_id = $1
-    `;
-    const bookResult = await pool.query(bookQuery, [bookId]);
-    const book = bookResult.rows[0];
-
-    if (!book) return null;
-
-    // Truy vấn thông tin về số lượng chương
-    const chapterStatsQuery = `
-        SELECT 
-            COUNT(*) as total_chapters,
-            MAX(chapter_order) as latest_chapter_order,
-            MAX(created_at) as last_update
-        FROM chapters
-        WHERE book_id = $1
-    `;
-    const chapterStatsResult = await pool.query(chapterStatsQuery, [bookId]);
-    const chapterStats = chapterStatsResult.rows[0];
-
-    // Truy vấn thông tin về chương đầu tiên
-    const firstChapterQuery = `
-        SELECT chapter_id, title, url
-        FROM chapters
-        WHERE book_id = $1
-        ORDER BY chapter_order ASC
-        LIMIT 1
-    `;
-    const firstChapterResult = await pool.query(firstChapterQuery, [bookId]);
-    const firstChapter = firstChapterResult.rows[0] || null;
-
-    // Truy vấn thông tin về chương mới nhất
-    const latestChapterQuery = `
-        SELECT chapter_id, title, url, created_at
-        FROM chapters
-        WHERE book_id = $1
-        ORDER BY chapter_order DESC
-        LIMIT 1
-    `;
-    const latestChapterResult = await pool.query(latestChapterQuery, [bookId]);
-    const latestChapter = latestChapterResult.rows[0] || null;
-
-    // Kết hợp tất cả thông tin
-    return {
-        ...book,
-        total_chapters: parseInt(chapterStats.total_chapters) || 0,
-        first_chapter: firstChapter,
-        latest_chapter: latestChapter,
-        last_update: chapterStats.last_update || book.updated_at
-    };
-};
 
 const getChaptersByBookId = async (bookId) => {
     const query = `
@@ -160,33 +112,6 @@ const getChaptersByBookId = async (bookId) => {
     return result.rows;
 };
 
-const getChapterById = async (chapterId) => {
-    const query = `
-        SELECT c.chapter_id, c.book_id, c.title, c.url, c.content, 
-               c.next_chapter_url, c.prev_chapter_url, c.chapter_order,
-               b.title as book_title, b.url as book_url
-        FROM chapters c
-        JOIN books b ON c.book_id = b.book_id
-        WHERE c.chapter_id = $1
-    `;
-    const values = [chapterId];
-
-    const result = await pool.query(query, values);
-    return result.rows[0];
-};
-
-const increaseBookViews = async (bookId) => {
-    const query = `
-        UPDATE books
-        SET views = views + 1
-        WHERE book_id = $1
-        RETURNING book_id, title, views
-    `;
-    const values = [bookId];
-
-    const result = await pool.query(query, values);
-    return result.rows[0];
-};
 
 const getBookDetail = async (bookId, chapterOrder = null, userId) => {
     // Phần code lấy thông tin sách vẫn giữ nguyên
@@ -279,9 +204,6 @@ module.exports = {
     getBooks,
     searchBooks,
     getTrendingBooks,
-    getBookById,
     getChaptersByBookId,
-    getChapterById,
-    increaseBookViews,
     getBookDetail
 };

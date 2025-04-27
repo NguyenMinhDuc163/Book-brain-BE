@@ -32,17 +32,3 @@ exports.getAuthorRankings = async (req, res) => {
         res.status(200).json(createResponse('fail', 'Lỗi khi lấy danh sách tác giả xếp hạng cao.', 500, [], err.message));
     }
 };
-
-// Cập nhật bảng xếp hạng (admin only)
-exports.updateRankings = async (req, res) => {
-    try {
-        // Kiểm tra role admin (bạn có thể thêm middleware kiểm tra role)
-        const result = await rankingService.updateRankings();
-
-        logger.info(`Đã cập nhật bảng xếp hạng: ${JSON.stringify(result)}`);
-        res.status(200).json(createResponse('success', 'Bảng xếp hạng đã được cập nhật thành công.', 200, [result]));
-    } catch (err) {
-        logger.error(`Lỗi khi cập nhật bảng xếp hạng: ${err.message}`, { meta: { error: err } });
-        res.status(200).json(createResponse('fail', 'Lỗi khi cập nhật bảng xếp hạng.', 500, [], err.message));
-    }
-};
