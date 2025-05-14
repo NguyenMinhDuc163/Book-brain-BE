@@ -30,7 +30,7 @@ exports.getReadingHistory = async (req, res) => {
 exports.updateReadingStatus = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { book_id, reading_status, completion_rate, notes } = req.body;
+        const { book_id, reading_status, completion_rate, notes, current_chapter_id } = req.body;
 
         if (!book_id || !reading_status) {
             logger.warn('Thiếu thông tin cần thiết.');
@@ -54,7 +54,17 @@ exports.updateReadingStatus = async (req, res) => {
             }
         }
 
-        const result = await readingHistoryService.updateReadingStatus(userId, book_id, reading_status, completionRateValue, notes);
+        // Kiểm tra current_chapter_id nếu được cung cấp - chỉ kiểm tra nó là số hợp lệ
+        let currentChapterId = null;
+        if (current_chapter_id !== undefined && current_chapter_id !== null) {
+            currentChapterId = parseInt(current_chapter_id);
+            if (isNaN(currentChapterId)) {
+                logger.warn(`ID chương không hợp lệ (không phải số): ${current_chapter_id}`);
+                return res.status(200).json(createResponse('fail', 'ID chương phải là số hợp lệ.', 400, []));
+            }
+        }
+
+        const result = await readingHistoryService.updateReadingStatus(userId, book_id, reading_status, completionRateValue, notes, currentChapterId);
 
         logger.info(`Đã cập nhật trạng thái đọc sách ID: ${book_id} thành "${reading_status}" cho người dùng ID: ${userId}`);
         res.status(200).json(createResponse('success', 'Đã cập nhật trạng thái đọc sách thành công.', 200, [result]));

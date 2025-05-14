@@ -49,39 +49,32 @@ const getBooks = async (filters = {}) => {
     return result.rows;
 };
 
-const searchBooks = async (keyword, limit = 10) => {
+const searchBooks = async (keyword, limit = 20, offset = 0) => {
     const query = `
         SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,
                a.author_id, a.name as author_name,
-               c.category_id, c.name as category_name,
-               GREATEST(
-                 similarity(b.title, $1),
-                 similarity(a.name, $1),
-                 similarity(c.name, $1),
-                 similarity(b.excerpt, $1)
-               ) as similarity_score
+               c.category_id, c.name as category_name
         FROM books b
-        LEFT JOIN authors a ON b.author_id = a.author_id
-        LEFT JOIN categories c ON b.category_id = c.category_id
-        WHERE 
-            b.title ILIKE $2 OR 
-            a.name ILIKE $2 OR
-            c.name ILIKE $2 OR
-            b.excerpt ILIKE $2 OR
-            similarity(b.title, $1) > 0.3 OR
-            similarity(a.name, $1) > 0.3 OR
-            similarity(c.name, $1) > 0.3
-        ORDER BY similarity_score DESC, b.views DESC
-        LIMIT $3
+                 JOIN authors a ON b.author_id = a.author_id
+                 JOIN categories c ON b.category_id = c.category_id
+        WHERE
+            unaccent(lower(b.title)) LIKE unaccent(lower($1)) OR
+            unaccent(lower(a.name)) LIKE unaccent(lower($1))
+        ORDER BY b.views DESC, b.created_at DESC
+        LIMIT $2 OFFSET $3;
     `;
-    const values = [keyword, `%${keyword}%`, limit];
+    const values = [`%${keyword}%`, limit, offset];
 
-    // Đảm bảo extension pg_trgm đã được cài đặt
-    // Cần chạy lệnh này trước: CREATE EXTENSION pg_trgm;
-
-    const result = await pool.query(query, values);
-    return result.rows;
+    try {
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (error) {
+        console.error("Lỗi tìm kiếm:", error);
+        throw error;
+    }
 };
+
+
 const getTrendingBooks = async (limit = 10) => {
     const query = `
         SELECT b.book_id, b.title, b.url, b.image_url, b.excerpt, b.views, b.status, b.rating,

@@ -64,7 +64,7 @@ class UserService {
 
     // Cập nhật thông tin người dùng
     static async updateUserInfo(data) {
-        const { id, email, phone_number, click_send_name, click_send_key } = data;
+        const { id, username, email, phone_number, click_send_name, click_send_key } = data;
 
         if (!id) {
             throw new Error('ID người dùng là bắt buộc.');
@@ -75,7 +75,17 @@ class UserService {
             throw new Error('Người dùng không tồn tại.');
         }
 
+        // Kiểm tra nếu username đã được cung cấp và khác với username hiện tại
+        if (username && username !== existingUser.username) {
+            // Kiểm tra xem username mới đã được sử dụng chưa
+            const usernameExists = await UserModel.findByUsername(username);
+            if (usernameExists && usernameExists.id !== id) {
+                throw new Error('Tên người dùng đã được sử dụng.');
+            }
+        }
+
         const updatedUser = await UserModel.updateUser(id, {
+            username,
             email,
             phone_number,
             click_send_name,
@@ -89,7 +99,6 @@ class UserService {
             data: [updatedUser]
         };
     }
-
     // Đổi mật khẩu người dùng
     static async changePassword(data) {
         const { id, oldPassword, newPassword } = data;

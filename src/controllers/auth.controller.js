@@ -16,11 +16,20 @@ exports.registerUser = async (req, res) => {
 // Cập nhật thông tin người dùng
 exports.updateUserInfo = async (req, res) => {
     try {
-        const response = await UserService.updateUserInfo(req.body);
+        // Sử dụng id từ token xác thực nếu có
+        const userId = req.user?.userId || req.body.id;
+
+        // Tạo object dữ liệu mới kèm theo userId
+        const userData = {
+            ...req.body,
+            id: userId
+        };
+
+        const response = await UserService.updateUserInfo(userData);
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi cập nhật thông tin người dùng: ${err.message}`, { meta: { request: req.body, error: err } });
-        return res.status(500).json(createResponse('fail', 'Lỗi khi cập nhật thông tin người dùng.', 500, [], err.message));
+        return res.status(200).json(createResponse('fail', 'Lỗi khi cập nhật thông tin người dùng.', 500, [], err.message));
     }
 };
 

@@ -111,26 +111,50 @@ exports.getUserReview = async (req, res) => {
 // Xóa đánh giá
 exports.deleteReview = async (req, res) => {
     try {
-        // Lấy reviewId từ query param
-        const reviewId = req.query.review_id;
+        // Lấy reviewId từ body thay vì query param
+        const { review_id } = req.body;
         const userId = req.user.userId;
 
-        if (!reviewId) {
+        if (!review_id) {
             logger.warn('Thiếu ID đánh giá.');
             return res.status(200).json(createResponse('fail', 'Vui lòng cung cấp ID đánh giá.', 400, []));
         }
 
-        const result = await reviewService.deleteReview(reviewId, userId);
+        const result = await reviewService.deleteReview(review_id, userId);
 
         if (result) {
-            logger.info(`Đã xóa đánh giá ID: ${reviewId} của người dùng ID: ${userId}`);
+            logger.info(`Đã xóa đánh giá ID: ${review_id} của người dùng ID: ${userId}`);
             res.status(200).json(createResponse('success', 'Đánh giá đã được xóa thành công.', 200, []));
         } else {
-            logger.warn(`Không tìm thấy đánh giá ID: ${reviewId} của người dùng ID: ${userId}`);
+            logger.warn(`Không tìm thấy đánh giá ID: ${review_id} của người dùng ID: ${userId}`);
             res.status(200).json(createResponse('fail', 'Không tìm thấy đánh giá này hoặc bạn không có quyền xóa.', 404, []));
         }
     } catch (err) {
-        logger.error(`Lỗi khi xóa đánh giá: ${err.message}`, { meta: { request: req.query, error: err } });
+        logger.error(`Lỗi khi xóa đánh giá: ${err.message}`, { meta: { request: req.body, error: err } });
+        res.status(200).json(createResponse('fail', 'Lỗi khi xóa đánh giá.', 500, [], err.message));
+    }
+};exports.deleteReview = async (req, res) => {
+    try {
+        // Lấy reviewId từ body thay vì query param
+        const { review_id } = req.body;
+        const userId = req.user.userId;
+
+        if (!review_id) {
+            logger.warn('Thiếu ID đánh giá.');
+            return res.status(200).json(createResponse('fail', 'Vui lòng cung cấp ID đánh giá.', 400, []));
+        }
+
+        const result = await reviewService.deleteReview(review_id, userId);
+
+        if (result) {
+            logger.info(`Đã xóa đánh giá ID: ${review_id} của người dùng ID: ${userId}`);
+            res.status(200).json(createResponse('success', 'Đánh giá đã được xóa thành công.', 200, []));
+        } else {
+            logger.warn(`Không tìm thấy đánh giá ID: ${review_id} của người dùng ID: ${userId}`);
+            res.status(200).json(createResponse('fail', 'Không tìm thấy đánh giá này hoặc bạn không có quyền xóa.', 404, []));
+        }
+    } catch (err) {
+        logger.error(`Lỗi khi xóa đánh giá: ${err.message}`, { meta: { request: req.body, error: err } });
         res.status(200).json(createResponse('fail', 'Lỗi khi xóa đánh giá.', 500, [], err.message));
     }
 };

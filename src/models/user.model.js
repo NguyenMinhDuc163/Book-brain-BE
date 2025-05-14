@@ -47,20 +47,30 @@ class UserModel {
         const result = await pool.query(query, [id]);
         return result.rows[0];
     }
+
+    // Trong file UserModel.js
+    static async findByUsername(username) {
+        const query = 'SELECT * FROM users WHERE username = $1';
+        const result = await pool.query(query, [username]);
+        return result.rows[0];
+    }
+
     // update user
     static async updateUser(userId, data) {
         const query = `
-        UPDATE users
-        SET 
-            email = COALESCE($1, email),
-            phone_number = COALESCE($2, phone_number),
-            click_send_name = COALESCE($3, click_send_name),
-            click_send_key = COALESCE($4, click_send_key),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING id, username, email, phone_number, click_send_name, click_send_key, updated_at;
-    `;
+            UPDATE users
+            SET
+                username = COALESCE($1, username),
+                email = COALESCE($2, email),
+                phone_number = COALESCE($3, phone_number),
+                click_send_name = COALESCE($4, click_send_name),
+                click_send_key = COALESCE($5, click_send_key),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6
+            RETURNING id, username, email, phone_number, click_send_name, click_send_key, updated_at;
+        `;
         const values = [
+            data.username || null,
             data.email || null,
             data.phone_number || null,
             data.click_send_name || null,
@@ -70,7 +80,6 @@ class UserModel {
         const result = await pool.query(query, values);
         return result.rows[0];
     }
-
 
 }
 

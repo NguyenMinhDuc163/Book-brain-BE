@@ -12,6 +12,6 @@ router.get('/api/v1/books_reviews', reviewController.getBookReviews);
 router.get('/api/v1/reviews/stats', reviewController.getBookReviewStats);
 
 // Xóa đánh giá
-router.delete('/api/v1/reviews', reviewController.deleteReview);
+router.post('/api/v1/reviews/delete', reviewController.deleteReview);
 
 module.exports = router;
