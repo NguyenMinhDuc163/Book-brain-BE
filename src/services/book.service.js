@@ -59,7 +59,8 @@ const searchBooks = async (keyword, limit = 20, offset = 0) => {
                  JOIN categories c ON b.category_id = c.category_id
         WHERE
             unaccent(lower(b.title)) LIKE unaccent(lower($1)) OR
-            unaccent(lower(a.name)) LIKE unaccent(lower($1))
+            unaccent(lower(a.name)) LIKE unaccent(lower($1)) OR
+            unaccent(lower(c.name)) LIKE unaccent(lower($1))
         ORDER BY b.views DESC, b.created_at DESC
         LIMIT $2 OFFSET $3;
     `;
