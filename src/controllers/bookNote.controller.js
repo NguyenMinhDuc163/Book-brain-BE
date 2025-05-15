@@ -50,6 +50,41 @@ class BookNoteController {
             });
         }
     }
+
+    async deleteNote(req, res) {
+        try {
+            const userId = req.user.userId;
+            const { noteId } = req.body;
+
+            if (!noteId) {
+                return res.status(400).json({
+                    code: 400,
+                    data: [],
+                    status: 'error',
+                    message: 'Vui lòng cung cấp ID của ghi chú cần xóa',
+                    error: 'Missing noteId'
+                });
+            }
+
+            const result = await bookNoteService.deleteNote(userId, noteId);
+
+            res.status(200).json({
+                code: 200,
+                data: [result],
+                status: 'success',
+                message: 'Xóa ghi chú thành công',
+                error: ''
+            });
+        } catch (error) {
+            res.status(500).json({
+                code: 500,
+                data: [],
+                status: 'error',
+                message: error.message,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new BookNoteController(); 

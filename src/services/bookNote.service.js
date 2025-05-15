@@ -40,6 +40,7 @@ class BookNoteService {
         try {
             let query = `
                 SELECT 
+                    note_id,
                     book_id,
                     chapter_id,
                     selected_text,
@@ -69,6 +70,7 @@ class BookNoteService {
             const result = await db.query(query, values);
 
             return result.rows.map(note => ({
+                noteId: note.note_id,
                 bookId: note.book_id,
                 chapterId: note.chapter_id,
                 selectedText: note.selected_text,
@@ -78,6 +80,29 @@ class BookNoteService {
             }));
         } catch (error) {
             throw new Error('Không thể lấy danh sách ghi chú: ' + error.message);
+        }
+    }
+
+    async deleteNote(userId, noteId) {
+        try {
+            const query = `
+                DELETE FROM book_notes 
+                WHERE user_id = $1 AND note_id = $2
+                RETURNING *
+            `;
+            
+            const values = [userId, noteId];
+            const result = await db.query(query, values);
+
+            if (result.rows.length === 0) {
+                throw new Error('Không tìm thấy ghi chú hoặc bạn không có quyền xóa ghi chú này');
+            }
+
+            return {
+                message: 'Xóa ghi chú thành công'
+            };
+        } catch (error) {
+            throw new Error('Không thể xóa ghi chú: ' + error.message);
         }
     }
 }
