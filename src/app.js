@@ -14,7 +14,7 @@ const subscriptionRouter = require('./routes/subscription.router');
 const notificationRouter = require('./routes/notification.router');
 const readingHistoryRouter = require('./routes/reading-history.router');
 const rankingRouter = require('./routes/ranking.router');
-
+const bookNoteRouter = require('./routes/book_note.router');
 
 // Middleware để parse JSON và ghi log
 app.use(express.json());
@@ -58,7 +58,7 @@ app.use(subscriptionRouter);
 app.use(notificationRouter);
 app.use(readingHistoryRouter);
 app.use(rankingRouter);
-
+app.use(bookNoteRouter);
 
 app.use((req, res, next) => {
     res.status(404).json({
@@ -68,6 +68,5 @@ app.use((req, res, next) => {
         error: ''
     });
 });
-
 
 module.exports = app;
