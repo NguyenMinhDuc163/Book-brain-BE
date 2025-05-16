@@ -51,7 +51,7 @@ exports.changePassword = async (req, res) => {
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi đổi mật khẩu: ${err.message}`, { meta: { request: req.body, error: err } });
-        return res.status(500).json(createResponse('fail', 'Lỗi khi đổi mật khẩu.', 500, [], err.message));
+        return res.status(200).json(createResponse('fail', 'Lỗi khi đổi mật khẩu.', 500, [], err.message));
     }
 };
 
