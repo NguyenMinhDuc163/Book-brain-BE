@@ -57,7 +57,7 @@ class UserService {
             message: 'Đăng nhập thành công.',
             data: [
                 { key: 'token', value: token },
-                { key: 'user', value: { id: user.id, username: user.username, email: user.email } }
+                { key: 'user', value: { id: user.id, username: user.username, email: user.email , isAds: user.is_ads} }
             ]
         };
     }
