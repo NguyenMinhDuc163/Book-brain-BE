@@ -9,7 +9,7 @@ exports.registerUser = async (req, res) => {
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi đăng ký người dùng: ${err.message}`, { meta: { request: req.body, error: err } });
-        return res.status(500).json(createResponse('fail', 'Lỗi khi đăng ký người dùng.', 500, [], err.message));
+        return res.status(200).json(createResponse('fail', 'Lỗi khi đăng ký người dùng.', 500, [], err.message));
     }
 };
 
@@ -40,7 +40,7 @@ exports.loginUser = async (req, res) => {
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi đăng nhập: ${err.message}`, { meta: { request: req.body, error: err } });
-        return res.status(500).json(createResponse('fail', 'Lỗi khi đăng nhập.', 500, [], err.message));
+        return res.status(200).json(createResponse('fail', 'Lỗi khi đăng nhập.', 500, [], err.message));
     }
 };
 
@@ -62,7 +62,7 @@ exports.requestForgotPassword = async (req, res) => {
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi yêu cầu reset mật khẩu: ${err.message}`);
-        return res.status(500).json(createResponse('fail', 'Lỗi server.', 500));
+        return res.status(200).json(createResponse('fail', 'Lỗi server.', 500));
     }
 };
 
@@ -73,6 +73,6 @@ exports.resetPassword = async (req, res) => {
         return res.status(response.status).json(createResponse(response.statusText, response.message, response.status, response.data));
     } catch (err) {
         logger.error(`Lỗi khi đặt lại mật khẩu: ${err.message}`, { meta: { request: req.body } });
-        return res.status(500).json(createResponse('fail', 'Lỗi server.', 500, null, err.message));
+        return res.status(200).json(createResponse('fail', 'Lỗi server.', 500, null, err.message));
     }
 };

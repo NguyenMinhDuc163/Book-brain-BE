@@ -61,7 +61,7 @@ app.use(rankingRouter);
 app.use(bookNoteRouter);
 
 app.use((req, res, next) => {
-    res.status(404).json({
+    res.status(200).json({
         code: 404,
         status: 'fail',
         message: 'API endpoint not found',

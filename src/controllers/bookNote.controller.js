@@ -8,7 +8,7 @@ class BookNoteController {
 
             const note = await bookNoteService.createNote(userId, noteData);
 
-            res.status(201).json({
+            res.status(200).json({
                 code: 201,
                 data: [note],
                 status: 'success',
@@ -16,7 +16,7 @@ class BookNoteController {
                 error: ''
             });
         } catch (error) {
-            res.status(500).json({
+            res.status(200).json({
                 code: 500,
                 data: [],
                 status: 'error',
@@ -41,7 +41,7 @@ class BookNoteController {
                 error: ''
             });
         } catch (error) {
-            res.status(500).json({
+            res.status(200).json({
                 code: 500,
                 data: [],
                 status: 'error',
@@ -57,7 +57,7 @@ class BookNoteController {
             const { noteId } = req.body;
 
             if (!noteId) {
-                return res.status(400).json({
+                return res.status(200).json({
                     code: 400,
                     data: [],
                     status: 'error',
@@ -76,7 +76,7 @@ class BookNoteController {
                 error: ''
             });
         } catch (error) {
-            res.status(500).json({
+            res.status(200).json({
                 code: 500,
                 data: [],
                 status: 'error',
